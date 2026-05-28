@@ -24,35 +24,34 @@ SYSTEM_PROMPT = f"""Ты — официальный AI-ассистент ком
 """
 
 def fallback_local_search(user_text):
-    """Резервный автономный ИИ-поиск по ключевым словам на случай сбоя API"""
+    """Умный поиск по базе знаний: ищет совпадения по смысловым блокам"""
     text = user_text.lower().strip()
-    lines = [line.strip() for line in COMPANY_KNOWLEDGE.split('\n') if line.strip()]
-    blocks = []
+    # Разбиваем базу знаний на смысловые разделы
+    sections = COMPANY_KNOWLEDGE.split('#')
     
-    if "привет" in text or "здравствуй" in text or "салем" in text:
-        return "Здравствуйте! Чем я могу помочь вам сегодня? Напишите, какой товар или услуга вас интересует."
+    # Ключевые слова для поиска
+    keywords = {
+        "услуги": ["услуги", "колеровка", "подбор", "доставка", "расчет", "сервис", "помощь"],
+        "компания": ["компания", "о нас", "кто вы", "центр красок", "магазин"],
+        "контакты": ["телефон", "адрес", "где", "находит", "контакт", "астана", "алматы"],
+        "товары": ["товары", "краски", "лаки", "ассортимент", "инструменты", "штукатурки"]
+    }
     
-    if "компани" in text or "о нас" in text or "кто вы" in text:
-        blocks.extend([l for l in lines if "центр красок" in l.lower() or "магазин" in l.lower()])
-    if "доставк" in text or "довезти" in text or "курьер" in text:
-        blocks.extend([l for l in lines if "доставк" in l.lower() or "бесплатн" in l.lower()])
-    if "адрес" in text or "где" in text or "находит" in text or "филиал" in text:
-        blocks.extend([l for l in lines if "адрес" in l.lower() or "ул." in l.lower() or "алматы" in l.lower() or "астана" in l.lower()])
-    if "телефон" in text or "номер" in text or "связаться" in text or "контакт" in text:
-        blocks.extend([l for l in lines if "телефон" in l.lower() or "+7" in l.lower()])
-    if "бренд" in text or "товар" in text or "краск" in text or "ассортимент" in text:
-        blocks.extend([l for l in lines if "бренд" in l.lower() or "краск" in l.lower() or "продукт" in l.lower()])
-
-    if not blocks:
-        words = [w for w in text.split() if len(w) > 3]
-        for line in lines:
-            if any(w in line.lower() for w in words) and line not in blocks:
-                blocks.append(line)
-
-    if blocks:
-        return "\n\n".join(list(dict.fromkeys(blocks)))
+    # Ищем, к какому разделу относится запрос
+    found_section = ""
+    for category, keys in keywords.items():
+        if any(key in text for key in keys):
+            # Ищем раздел в базе знаний, который содержит эти слова
+            for sec in sections:
+                if category in sec.lower():
+                    found_section = sec.strip()
+                    break
     
-    return "К сожалению, я не нашёл точного ответа в базе данных. Пожалуйста, свяжитесь с нами по телефону: +7 778 061 5000"
+    if found_section:
+        # Убираем заголовок раздела из ответа для красоты
+        return "\n".join(found_section.split('\n')[1:]).strip()
+    
+    return "К сожалению, я не нашел точного ответа в базе. Пожалуйста, позвоните нам: +7 778 061 5000"
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
