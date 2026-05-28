@@ -26,7 +26,7 @@ SYSTEM_PROMPT = f"""Ты — официальный AI-ассистент ком
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
-    dialog_histories[chat_id] = []  # Очищаем историю при команде /start
+    dialog_histories[chat_id] = []
     
     welcome_text = (
         "👋 Привет! Я — AI-ассистент магазина «Центр Красок #1».\n\n"
@@ -41,11 +41,9 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if chat_id not in dialog_histories:
         dialog_histories[chat_id] = []
 
-    # Добавляем сообщение пользователя в историю (храним последние 10 реплик для контекста)
     dialog_histories[chat_id].append({"role": "user", "content": user_text})
     dialog_histories[chat_id] = dialog_histories[chat_id][-10:]
 
-    # Показываем статус "печатает" в Телеграме
     await context.bot.send_chat_action(chat_id=chat_id, action="typing")
 
     api_key = os.getenv("OPENROUTER_API_KEY")
@@ -62,7 +60,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     "X-Title": "Centr Krasok Bot"
                 },
                 json={
-                    "model": "google/gemini-2.5-flash:free",
+                    "model": "meta-llama/llama-3-8b-instruct:free",
                     "messages": messages
                 }
             )
@@ -77,7 +75,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     except Exception as e:
         logger.error(f"Error: {e}")
-        # Выводим реальную ошибку в чат, чтобы сразу понять, если что-то не так со связью
         fallback_text = f"⚙️ Техническая ошибка для отладки:\n{str(e)}"
         await update.message.reply_text(fallback_text)
 
