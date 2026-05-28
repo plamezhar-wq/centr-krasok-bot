@@ -55,9 +55,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     "HTTP-Referer": "https://railway.app", 
                     "X-Title": "Centr Krasok Bot"
                 },
-                json={
-                    "model": "meta-llama/llama-3-8b-instruct:free", # Полностью бесплатная модель
-                    "messages": messages
+                "model": "google/gemini-2.5-flash:free",
                 }
             )
             
