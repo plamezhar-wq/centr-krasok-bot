@@ -3,7 +3,7 @@ import logging
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 import google.generativeai as genai
-from company_info import COMPANY_KNOWLEDGE  # Импорт твоей базы данных
+from company_info import COMPANY_KNOWLEDGE
 
 # Настройка логирования
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
@@ -28,13 +28,13 @@ SYSTEM_PROMPT = f"""
 
 ПРАВИЛА ОТВЕТОВ:
 1. Отвечай на том языке, на котором обратился клиент (русский или казахский).
-2. Используй только факты из текста выше. Если информации о каком-то товаре, цене или услуге нет в базе данных, НЕ придумывай её (не галлюцинируй). В таком случае вежливо ответь, что не владеешь этой информацией, и предложи связаться по телефону: +7 778 061 5000.
+2. Используй только факты из текста выше. Если информации о каком-то товаре, цене или услуге нет в базе данных, НЕ придумывай её. В таком случае вежливо ответь, что не владеешь этой информацией, и предложи связаться по телефону: +7 778 061 5000.
 3. Твои ответы должны быть четкими, структурированными и дружелюбными.
 """
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
-    dialog_histories[chat_id] = []  # Очищаем историю при /start
+    dialog_histories[chat_id] = []
     
     welcome_text = (
         "👋 Привет! Я — AI-ассистент магазина «Центр Красок #1».\n\n"
@@ -49,28 +49,25 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if chat_id not in dialog_histories:
         dialog_histories[chat_id] = []
 
-    # Добавляем сообщение пользователя в историю
-    dialog_histories[chat_id].append({"role": "user", "parts": [user_text]})
-    # Храним только последние 10 сообщений для экономии контекста
+    # Добавляем сообщение пользователя
+    dialog_histories[chat_id].append({"role": "user", "parts": user_text})
     dialog_histories[chat_id] = dialog_histories[chat_id][-10:]
 
-    # Показываем статус "печатает..."
     await context.bot.send_chat_action(chat_id=chat_id, action="typing")
 
     try:
-        # Настройка модели Gemini
         model = genai.GenerativeModel(
             model_name="gemini-1.5-flash",
             system_instruction=SYSTEM_PROMPT
         )
         
-        # Передаем историю диалога в Gemini
+        # Создаем сессию чата с историей
         chat = model.start_chat(history=dialog_histories[chat_id][:-1])
         response = chat.send_message(user_text)
         ai_reply = response.text
 
-        # Сохраняем ответ бота в историю
-        dialog_histories[chat_id].append({"role": "model", "parts": [ai_reply]})
+        # Сохраняем ответ модели
+        dialog_histories[chat_id].append({"role": "model", "parts": ai_reply})
         
         await update.message.reply_text(ai_reply)
 
