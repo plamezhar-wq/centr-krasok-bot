@@ -39,15 +39,7 @@ def fallback_local_search(user_text):
     return "К сожалению, я не нашел точного ответа в базе. Пожалуйста, позвоните нам: +7 778 061 5000"
     
     # Ищем, к какому разделу относится запрос
-    found_section = ""
-    for category, keys in keywords.items():
-        if any(key in text for key in keys):
-            # Ищем раздел в базе знаний, который содержит эти слова
-            for sec in sections:
-                if category in sec.lower():
-                    found_section = sec.strip()
-                    break
-    
+       
     if found_section:
         # Убираем заголовок раздела из ответа для красоты
         return "\n".join(found_section.split('\n')[1:]).strip()
