@@ -60,7 +60,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     "X-Title": "Centr Krasok Bot"
                 },
                 json={
-                    "model": "meta-llama/llama-3-8b-instruct:free",
+                    "model": "mistralai/mistral-7b-instruct:free",
                     "messages": messages
                 }
             )
