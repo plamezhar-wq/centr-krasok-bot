@@ -1,6 +1,5 @@
 import os
 import logging
-import httpx
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 from company_info import COMPANY_KNOWLEDGE
@@ -9,74 +8,74 @@ from company_info import COMPANY_KNOWLEDGE
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Хранилище контекста диалогов
-dialog_histories = {}
-
-SYSTEM_PROMPT = f"""Ты — официальный AI-ассистент компании "Центр Красок" (Казахстан, сайт centr-krasok.kz).
-Отвечай вежливо, грамотно и СТРОГО на основе предоставленной информации о компании.
-
-ИНФОРМАЦИЯ О КОМПАНИИ:
-{COMPANY_KNOWLEDGE}
-
-ПРАВИЛА ОТВЕТОВ:
-1. Отвечай на том языке, на котором обратился клиент (русский или казахский).
-2. Используй только факты из текста выше. Если информации нет в базе данных, НЕ придумывай её. Вежливо ответь, что не владеешь этой информацией, и предложи связаться по телефону: +7 778 061 5000.
-3. Ответы должны быть четкими и дружелюбными.
-"""
-
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    chat_id = update.effective_chat.id
-    dialog_histories[chat_id] = []
-    
     welcome_text = (
-        "👋 Привет! Я — AI-ассистент магазина «Центр Красок #1».\n\n"
+        "👋 Привет! Я — официальный AI-ассистент магазина «Центр Красок #1».\n\n"
         "Спрашивайте меня о наших товарах, брендах, ценах, доставке или услугах — отвечу на любой вопрос!"
     )
     await update.message.reply_text(welcome_text)
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    chat_id = update.effective_chat.id
-    user_text = update.message.text
+    user_text = update.message.text.lower().strip()
+    await context.bot.send_chat_action(chat_id=update.effective_chat.id, action="typing")
 
-    if chat_id not in dialog_histories:
-        dialog_histories[chat_id] = []
+    # Превращаем текст базы данных в список строк для удобного поиска
+    lines = [line.strip() for line in COMPANY_KNOWLEDGE.split('\n') if line.strip()]
+    
+    response_blocks = []
 
-    dialog_histories[chat_id].append({"role": "user", "content": user_text})
-    dialog_histories[chat_id] = dialog_histories[chat_id][-10:]
+    # Логика умного поиска по ключевым словам в базе данных
+    if "привет" in user_text or "здравствуй" in user_text or "салем" in user_text:
+        response_blocks.append("Здравствуйте! Чем я могу помочь вам сегодня? Напишите, какой товар или услуга вас интересует.")
+    
+    elif "компани" in user_text or "о нас" in user_text or "кто вы" in user_text:
+        # Ищем блок общей информации
+        for line in lines:
+            if "центр красок" in line.lower() or "официальный" in line.lower() or "магазин" in line.lower():
+                response_blocks.append(line)
+                
+    elif "доставк" in user_text or "довезти" in user_text or "курьер" in user_text:
+        for line in lines:
+            if "доставк" in line.lower() or "город" in line.lower() or "бесплатн" in line.lower():
+                response_blocks.append(line)
+                
+    elif "адрес" in user_text or "где" in user_text or "находит" in user_text or "филиал" in user_text or "город" in line.lower():
+        for line in lines:
+            if "адрес" in line.lower() or "ул." in line.lower() or "алматы" in line.lower() or "астана" in line.lower() or "филиал" in line.lower():
+                response_blocks.append(line)
 
-    await context.bot.send_chat_action(chat_id=chat_id, action="typing")
+    elif "телефон" in user_text or "номер" in user_text or "связаться" in user_text or "контакт" in user_text:
+        for line in lines:
+            if "телефон" in line.lower() or "контакт" in line.lower() or "+7" in line.lower():
+                response_blocks.append(line)
 
-    api_key = os.getenv("OPENROUTER_API_KEY")
+    elif "бренд" in user_text or "товар" in user_text or "краск" in user_text or "ассортимент" in user_text or "что есть" in user_text:
+        for line in lines:
+            if "бренд" in line.lower() or "краск" in line.lower() or "продукт" in line.lower() or "декор" in line.lower():
+                response_blocks.append(line)
 
-    try:
-        messages = [{"role": "system", "content": SYSTEM_PROMPT}] + dialog_histories[chat_id]
-        
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            response = await client.post(
-                "https://openrouter.ai/api/v1/chat/completions",
-                headers={
-                    "Authorization": f"Bearer {api_key}",
-                    "HTTP-Referer": "https://railway.app", 
-                    "X-Title": "Centr Krasok Bot"
-                },
-                json={
-                    "model": "mistralai/mistral-7b-instruct:free",
-                    "messages": messages
-                }
-            )
-            
-            if response.status_code == 200:
-                ai_reply = response.json()['choices'][0]['message']['content'].strip()
-                dialog_histories[chat_id].append({"role": "assistant", "content": ai_reply})
-                await update.message.reply_text(ai_reply)
-            else:
-                logger.error(f"OpenRouter Error: {response.text}")
-                raise Exception(f"API Error: Status {response.status_code}")
+    # Если точечные ключевые слова не сработали, ищем любые совпадения по словам пользователя
+    if not response_blocks:
+        user_words = [w for w in user_text.split() if len(w) > 3]
+        for line in lines:
+            if any(word in line.lower() for word in user_words):
+                if line not in response_blocks:
+                    response_blocks.append(line)
 
-    except Exception as e:
-        logger.error(f"Error: {e}")
-        fallback_text = f"⚙️ Техническая ошибка для отладки:\n{str(e)}"
-        await update.message.reply_text(fallback_text)
+    # Собираем ответ
+    if response_blocks:
+        # Убираем дубликаты и соединяем в красивый текст
+        final_reply = "\n\n".join(list(dict.fromkeys(response_blocks)))
+        # Ограничим длину, если вышло слишком много текста
+        if len(final_reply) > 4000:
+            final_reply = final_reply[:3900] + "..."
+    else:
+        final_reply = (
+            "К сожалению, я не нашёл точного ответа на этот вопрос в нашей базе данных.\n\n"
+            "Пожалуйста, свяжитесь с нашим отделом продаж по телефону: **+7 778 061 5000**, и наш менеджер с радостью вам поможет!"
+        )
+
+    await update.message.reply_text(final_reply, parse_mode="Markdown")
 
 def main():
     token = os.getenv("TELEGRAM_TOKEN")
@@ -88,7 +87,7 @@ def main():
     application.add_handler(CommandHandler("start", start))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
     
-    logger.info("Бот успешно запущен!")
+    logger.info("Бот успешно запущен в автономном режиме!")
     application.run_polling()
 
 if __name__ == '__main__':
