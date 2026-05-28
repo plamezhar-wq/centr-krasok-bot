@@ -26,15 +26,15 @@ SYSTEM_PROMPT = f"""Ты — официальный AI-ассистент ком
 def fallback_local_search(user_text):
     text = user_text.lower().strip()
     
-    # Прямой поиск по всей базе знаний без сложных условий
+    # Ищем ключевое слово и возвращаем весь блок целиком
     if any(word in text for word in ["занимается", "компания", "кто вы"]):
-        return [sec for sec in COMPANY_KNOWLEDGE.split('#') if "компании" in sec.lower()][0]
+        return "«Центр Красок #1» — специализированный интернет-магазин и розничная сеть в Казахстане, предлагающая товары премиум и ультра-премиум сегмента в области ЛКМ (лакокрасочных материалов) и декоративной отделки."
     
     if any(word in text for word in ["услуги", "колеровка", "доставка"]):
-        return [sec for sec in COMPANY_KNOWLEDGE.split('#') if "услуги" in sec.lower()][0]
+        return "Мы предлагаем: \n- Колеровку (более 45 000 оттенков);\n- Бесплатные консультации специалистов;\n- Оперативную доставку до двери;\n- Программы для дизайнеров и строителей."
         
     if any(word in text for word in ["бренд", "сотрудничает"]):
-        return [sec for sec in COMPANY_KNOWLEDGE.split('#') if "бренды" in sec.lower()][0]
+        return "Мы сотрудничаем с ведущими брендами: Dulux, Marshall, Dufa, Little Greene, Oikos, Teknos, Anza, Storch и многими другими. Весь товар оригинальный и сертифицированный."
 
     return "К сожалению, я не нашел точного ответа в базе. Пожалуйста, позвоните нам: +7 778 061 5000"
     
