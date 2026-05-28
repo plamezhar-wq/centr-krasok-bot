@@ -43,8 +43,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await context.bot.send_chat_action(chat_id=chat_id, action="typing")
 
     api_key = os.getenv("OPENROUTER_API_KEY")
-
-    try:
+try:
         messages = [{"role": "system", "content": SYSTEM_PROMPT}] + dialog_histories[chat_id]
         
         async with httpx.AsyncClient(timeout=30.0) as client:
@@ -55,7 +54,9 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     "HTTP-Referer": "https://railway.app", 
                     "X-Title": "Centr Krasok Bot"
                 },
-                "model": "google/gemini-2.5-flash:free",
+                json={
+                    "model": "google/gemini-2.5-flash:free",
+                    "messages": messages
                 }
             )
             
@@ -65,11 +66,11 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 await update.message.reply_text(ai_reply)
             else:
                 logger.error(f"OpenRouter Error: {response.text}")
-                raise Exception("API Error")
+                raise Exception(f"API Error: Status {response.status_code}")
 
     except Exception as e:
         logger.error(f"Error: {e}")
-        fallback_text = "Извините, произошла техническая ошибка. Пожалуйста, попробуйте позже или позвоните нам: +7 778 061 5000"
+        fallback_text = f"⚙️ Техническая ошибка для отладки:\n{str(e)}"
         await update.message.reply_text(fallback_text)
 
 def main():
