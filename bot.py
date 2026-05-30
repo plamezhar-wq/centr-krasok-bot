@@ -169,7 +169,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                         "X-Title": "Centr Krasok Bot"
                     },
                     json={
-                        "model": "google/gemini-2.5-flash:free",
+                        "model": "google/gemini-2.5-flash-preview-05-20:free",
                         "messages": messages,
                         "temperature": 0.4,
                         "max_tokens": 600
