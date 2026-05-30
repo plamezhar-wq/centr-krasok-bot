@@ -5,58 +5,88 @@ from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 from company_info import COMPANY_KNOWLEDGE
 
-# Настройка логирования
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Хранилище контекста диалогов (Память бота)
 dialog_histories = {}
 
-SYSTEM_PROMPT = f"""Ты — официальный AI-ассистент компании "Центр Красок" (Казахстан, сайт centr-krasok.kz).
-Отвечай вежливо, грамотно и СТРОГО на основе предоставленной информации о компании.
+SYSTEM_PROMPT = f"""Ты — Айгерим, консультант магазина «Центр Красок #1» (Казахстан, centr-krasok.kz).
+Ты живой, тёплый человек-консультант с характером — не робот и не справочник.
+
+ТВОЙ СТИЛЬ ОБЩЕНИЯ:
+- Всегда приветствуй клиента тепло: "Добрый день!", "Здравствуйте!", "Привет!" — в зависимости от тона клиента.
+- Отвечай живо и по-человечески. Используй фразы типа: "Отличный выбор!", "Хороший вопрос!", "Да, конечно!", "С удовольствием помогу!"
+- После ответа ВСЕГДА задавай один уточняющий вопрос — чтобы помочь клиенту лучше. Примеры:
+  * "Скажите, это для квартиры или для дома?"
+  * "Вы уже знаете какой цвет хотите, или подберём вместе?"
+  * "Для какой поверхности выбираете — стены, потолок, дерево?"
+  * "Вы сами будете красить или нанимаете мастера?"
+  * "Какой у вас примерно метраж помещения?"
+- Не пиши длинные списки без нужды — говори как живой человек.
+- Иногда можно добавить лёгкую эмоцию: "Это один из наших самых популярных брендов 😊"
+
+ПРАВИЛА (СТРОГО):
+1. Отвечай ТОЛЬКО на основе информации о компании ниже. Не придумывай факты о товарах и ценах.
+2. Если информации нет — скажи: "Уточню у коллег! Позвоните нам: +7 778 061 5000 — ответим сразу."
+3. Отвечай на том языке, на котором написал клиент (русский, казахский).
+4. Посторонние темы (политика, личное, конкуренты) — мягко уводи: "Я специализируюсь на красках и отделке 😊 Могу помочь с выбором материалов!"
+5. Никогда не говори что ты AI или бот — ты Айгерим, консультант.
 
 ИНФОРМАЦИЯ О КОМПАНИИ:
 {COMPANY_KNOWLEDGE}
-
-ПРАВИЛА ОТВЕТОВ (ЗАЩИТА ОТ ГАЛЛЮЦИНАЦИЙ):
-1. Отвечай на том языке, на котором обратился клиент (русский или казахский).
-2. Используй ТОЛЬКО факты из предоставленного текста. Если информации в базе нет, НЕ придумывай её. Вежливо ответь, что не владеешь информацией, и предложи связаться по телефону: +7 778 061 5000.
 """
 
 def fallback_local_search(user_text):
     text = user_text.lower().strip()
     
-    # 1. Формируем ответы для ключевых запросов
-    # Мы прописываем полные ответы, чтобы бот не "резал" базу знаний 
-    
-    if any(word in text for word in ["занимается", "компания", "кто вы"]):
-        return "«Центр Красок #1» — специализированный интернет-магазин и розничная сеть в Казахстане (Алматы, Астана), предлагающая товары премиум и ультра-премиум сегмента в области ЛКМ и декоративной отделки. Мы предлагаем более 20 брендов красок для любых задач, колеровку в 45 000 оттенков, а также профессиональные консультации и оперативную доставку."
+    if any(word in text for word in ["занимается", "компания", "кто вы", "что вы"]):
+        return ("Добрый день! 😊 «Центр Красок #1» — это специализированный магазин премиальных красок и отделочных материалов в Казахстане. "
+                "Работаем в Алматы и Астане, доставляем по всей стране.\n\n"
+                "Скажите, вы планируете ремонт или ищете что-то конкретное?")
         
-    if any(word in text for word in ["бренд", "сотрудничает", "бренды"]):
-        return "Мы сотрудничаем с ведущими мировыми производителями: \n- Мировые лидеры: Dulux, Marshall, Dufa.\n- Дизайнерские/премиальные: Little Greene, Argile, Oikos, Swiss Lake, Hygge.\n- Профессиональные: ProFiTec, Teknos, Sikkens, Pinotex, Hammerite, Tikkurila.\n- Инструменты: Anza, Storch, Wagner, Color Expert, Mako.\nВсего в ассортименте более 20 брендов."
+    if any(word in text for word in ["бренд", "бренды", "производитель"]):
+        return ("У нас представлено более 20 ведущих мировых брендов:\n"
+                "🌍 Мировые лидеры: Dulux, Marshall, Dufa\n"
+                "✨ Премиум: Little Greene, Oikos, Swiss Lake, Hygge\n"
+                "🔧 Профессиональные: Teknos, Sikkens, Pinotex, Hammerite, Tikkurila\n"
+                "🖌 Инструменты: Anza, Storch, Wagner\n\n"
+                "Для каких задач подбираете краску?")
 
-    if any(word in text for word in ["услуги", "колеровка", "доставка", "помощь"]):
-        return "Наши услуги:\n- Профессиональная колеровка (45 000 оттенков).\n- Бесплатная консультация специалистов по подбору материалов.\n- Оперативная доставка до двери или самовывоз из шоу-румов.\n- Специальные бонусы для дизайнеров, архитекторов и строителей."
+    if any(word in text for word in ["услуги", "колеровка", "доставка"]):
+        return ("С удовольствием расскажу! Наши услуги:\n"
+                "🎨 Колеровка — более 45 000 оттенков\n"
+                "💬 Бесплатная консультация по подбору материалов\n"
+                "🚚 Доставка до двери или самовывоз\n"
+                "⭐ Специальные условия для дизайнеров и строителей\n\n"
+                "Что из этого вас интересует?")
 
-    # Если запрос не распознан
-    return "К сожалению, я не нашел точного ответа в базе. Пожалуйста, свяжитесь с нами по телефону: +7 778 061 5000"
-    
-    # Ищем, к какому разделу относится запрос
-       
-    if found_section:
-        # Убираем заголовок раздела из ответа для красоты
-        return "\n".join(found_section.split('\n')[1:]).strip()
-    
-    return "К сожалению, я не нашел точного ответа в базе. Пожалуйста, позвоните нам: +7 778 061 5000"
+    if any(word in text for word in ["контакт", "телефон", "адрес", "офис", "где"]):
+        return ("Конечно! Наши контакты:\n"
+                "📞 +7 778 061 5000\n"
+                "📧 info@centr-krasok.kz\n"
+                "🕐 Режим работы: Пн–Вс, 10:00–20:00\n"
+                "📍 Алматы: ул. Кабдолова, д. 1/8\n\n"
+                "Вы планируете приехать к нам или удобнее доставка?")
+
+    return ("Добрый день! Уточню этот вопрос у коллег 😊\n"
+            "Позвоните нам: +7 778 061 5000 — ответим сразу!\n\n"
+            "Могу помочь ещё с чем-нибудь?")
+
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
+    user_name = update.effective_user.first_name or "друг"
     dialog_histories[chat_id] = []
+    
     welcome_text = (
-        "👋 Привет! Я — официальный AI-ассистент магазина «Центр Красок #1».\n\n"
-        "Спрашивайте меня о наших товарах, брендах, ценах, доставке или услугах — отвечу на любой вопрос!"
+        f"Здравствуйте, {user_name}! 👋\n\n"
+        "Я — Айгерим, консультант магазина *«Центр Красок #1»*.\n\n"
+        "Помогу подобрать краску, лак или отделочный материал под вашу задачу — "
+        "у нас более 20 брендов и 45 000 оттенков 🎨\n\n"
+        "С чего начнём? Расскажите, что планируете красить или обновлять!"
     )
-    await update.message.reply_text(welcome_text)
+    await update.message.reply_text(welcome_text, parse_mode="Markdown")
+
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
@@ -66,27 +96,26 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         dialog_histories[chat_id] = []
 
     dialog_histories[chat_id].append({"role": "user", "content": user_text})
-    dialog_histories[chat_id] = dialog_histories[chat_id][-6:]
+    dialog_histories[chat_id] = dialog_histories[chat_id][-10:]
 
     await context.bot.send_chat_action(chat_id=chat_id, action="typing")
     api_key = os.getenv("OPENROUTER_API_KEY")
 
-    # 1. Пробуем сделать официальный запрос к AI API
     if api_key:
         try:
             messages = [{"role": "system", "content": SYSTEM_PROMPT}] + dialog_histories[chat_id]
-            async with httpx.AsyncClient(timeout=10.0) as client:
+            async with httpx.AsyncClient(timeout=15.0) as client:
                 response = await client.post(
                     "https://openrouter.ai/api/v1/chat/completions",
                     headers={
                         "Authorization": f"Bearer {api_key}",
-                        "HTTP-Referer": "https://railway.app", 
+                        "HTTP-Referer": "https://railway.app",
                         "X-Title": "Centr Krasok Bot"
                     },
                     json={
                         "model": "google/gemini-2.5-flash:free",
                         "messages": messages,
-                        "temperature": 0.1
+                        "temperature": 0.4
                     }
                 )
                 
@@ -96,14 +125,14 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     await update.message.reply_text(ai_reply, parse_mode="Markdown")
                     return
                 else:
-                    logger.warning(f"API Error {response.status_code}, переключаюсь на локальный поиск.")
+                    logger.warning(f"API Error {response.status_code}")
         except Exception as e:
-            logger.error(f"Ошибка сети API: {e}, переключаюсь на локальный поиск.")
+            logger.error(f"Ошибка API: {e}")
 
-    # 2. Если API сбоит — незаметно спасаем положение локальным поиском
     local_reply = fallback_local_search(user_text)
     dialog_histories[chat_id].append({"role": "assistant", "content": local_reply})
     await update.message.reply_text(local_reply, parse_mode="Markdown")
+
 
 def main():
     token = os.getenv("TELEGRAM_TOKEN")
@@ -115,8 +144,9 @@ def main():
     application.add_handler(CommandHandler("start", start))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
     
-    logger.info("Бот успешно запущен!")
+    logger.info("Бот запущен!")
     application.run_polling()
+
 
 if __name__ == '__main__':
     main()
