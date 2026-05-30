@@ -169,7 +169,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                         "X-Title": "Centr Krasok Bot"
                     },
                     json={
-                        "model": "google/gemini-2.0-flash-exp:free",
+                        "model": "deepseek/deepseek-chat-v3-0324:free",
                         "messages": messages,
                         "temperature": 0.4,
                         "max_tokens": 600
