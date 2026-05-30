@@ -169,7 +169,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                         "X-Title": "Centr Krasok Bot"
                     },
                     json={
-                        "model": "deepseek/deepseek-v4-flash:free",
+                        "model": "meta-llama/llama-3.3-70b-instruct:free",
                         "messages": messages,
                         "temperature": 0.4,
                         "max_tokens": 600
